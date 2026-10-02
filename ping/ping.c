@@ -23,10 +23,9 @@ int main() {
     request.identifier = htons(100);
     request.sequence = htons(1);
 
-    uint8_t *bytes = (uint8_t *)&request;
-    size_t request_length = sizeof(request);
+    request.checksum = icmp_checksum(&request, sizeof(request));
 
-    request.checksum = icmp_checksum(bytes, request_length);
+    return 0;
 }
 
 uint16_t icmp_checksum(void *data, size_t length) {
@@ -37,6 +36,11 @@ uint16_t icmp_checksum(void *data, size_t length) {
     // Iterates over the bytes to sum the package fields
     for(size_t i = 0; i + 1 < length; i += 2) {
         sum += ((uint16_t)bytes[i] << 8) | bytes[i + 1];
+    }
+
+    // Add the solitary byte to the sum
+    if(length % 2 != 0) {
+        sum += (uint16_t)bytes[length - 1] << 8;
     }
 
     // End-Around Carry
