@@ -23,8 +23,66 @@ int main() {
     request.identifier = htons(100);
     request.sequence = htons(1);
 
-    request.checksum = icmp_checksum(&request, sizeof(request));
+    request.checksum = htons(icmp_checksum(&request, sizeof(request)));
 
+    // Winsock startup
+    WSADATA wsa;
+    if(WSAStartup(MAKEWORD(2,2), &wsa) != 0) {
+        perror("WSAStartup");
+        return 1;
+    }
+
+    // Socket declaration
+    SOCKET sock = socket(AF_INET, SOCK_RAW, IPPROTO_ICMP);
+    if(sock < 0) {
+        perror("socket");
+        return 1;
+    }
+
+    // Address structure
+    struct sockaddr_in destination;
+    memset(&destination, 0, sizeof(destination));
+
+    destination.sin_family = AF_INET;
+    destination.sin_addr.s_addr = inet_addr("127.0.0.1");
+
+    // ICMP package sending
+    int sent = sendto(
+        sock,
+        (const char *)&request,
+        sizeof(request),
+        0,
+        (struct sockaddr *)&destination,
+        sizeof(destination)
+    );
+
+    if (sent == SOCKET_ERROR) {
+        printf("sendto failed: %d\n", WSAGetLastError());
+        return 1;
+    }
+
+    // Recieves the bytes from response
+    char buffer[65535];
+    int destinationlen = sizeof(destination);
+
+    int received = recvfrom(
+        sock,
+        buffer,
+        sizeof(buffer),
+        0,
+        (struct sockaddr *)&destination,
+        &destinationlen
+    );
+
+    if (received == SOCKET_ERROR) {
+        printf("recvfrom failed: %d\n", WSAGetLastError());
+        return 1;
+    }
+
+    printf("%d", received);
+
+    closesocket(sock);
+    WSACleanup();
     return 0;
 }
 
