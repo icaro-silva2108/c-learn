@@ -63,7 +63,7 @@ int main() {
 
     // Recieves the bytes from response
     char buffer[65535];
-    int destinationlen = sizeof(destination);
+    int destination_len = sizeof(destination);
 
     int received = recvfrom(
         sock,
@@ -71,7 +71,7 @@ int main() {
         sizeof(buffer),
         0,
         (struct sockaddr *)&destination,
-        &destinationlen
+        &destination_len
     );
 
     if (received == SOCKET_ERROR) {
@@ -79,7 +79,19 @@ int main() {
         return 1;
     }
 
-    printf("%d", received);
+    printf("Bytes received: %d\n", received);
+
+    // Get the ICMP Header from reply
+    uint8_t ihl = buffer[0] & 0x0F;
+    size_t ipv4_header_len = ihl * 4;
+    uint8_t *icmp_header = (uint8_t *)buffer + ipv4_header_len;
+
+    struct icmp_echo *reply = (struct icmp_echo *)icmp_header;
+    printf("Type: %u\n", reply->type);
+    printf("Code: %u\n", reply->code);
+    printf("Checksum: %u\n", ntohs(reply->checksum));
+    printf("Identifier: %u\n", ntohs(reply->identifier));
+    printf("Sequence: %u\n", ntohs(reply->sequence));
 
     closesocket(sock);
     WSACleanup();
